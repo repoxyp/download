@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Fast Video Downloader</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+       
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+        
+        input[type="url"], select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="url"]:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .download-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .download-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .download-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #4CAF50;
+            margin: 15px 0;
+            font-size: 16px;
+        }
+        
+        .format-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .format-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .format-item {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .format-item:hover {
+            border-color: #4CAF50;
+        }
+        
+        .format-item.selected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚡ Ultra Fast Video Downloader</h1>
+    <p class="subtitle">Download videos from YouTube, Facebook, TikTok, Instagram without cookies!</p>
+    
+    <form action="/download" method="POST" id="downloadForm">
+        <div class="form-group">
+            <label for="url">🔗 Paste Video URL:</label>
+            <input type="url" name="url" id="url" 
+                   placeholder="https://www.youtube.com/watch?v=..." 
+                   required
+                   autocomplete="off">
+            <div class="error" id="urlError"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="format">🎬 Select Quality & Format:</label>
+            <select name="format" id="format" required disabled>
+                <option value="">Enter URL first to see available formats</option>
+            </select>
+            <div class="loading" id="formatLoading">🔄 Scanning available formats...</div>
+            <div class="format-info" id="formatInfo" style="display: none;">
+                <strong>✅ Available Formats Found!</strong>
+                <div class="format-details" id="formatDetails"></div>
+            </div>
+            <div class="error" id="formatError"></div>
+        </div>
+        
+        <button type="submit" class="download-btn" id="submitBtn" disabled>
+            ⬇️ Download Now
+        </button>
+        
+        <div class="success" id="successMessage">
+            ✅ Download started! Please wait...
+        </div>
+    </form>
+</div>
+
+<footer>
+    <p>&copy; 2025 Developer By Utsob | No Cookies Required | Fast Download</p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlInput = document.getElementById('url');
+    const formatSelect = document.getElementById('format');
+    const submitBtn = document.getElementById('submitBtn');
+    const formatLoading = document.getElementById('formatLoading');
+    const formatInfo = document.getElementById('formatInfo');
+    const formatDetails = document.getElementById('formatDetails');
+    const urlError = document.getElementById('urlError');
+    const formatError = document.getElementById('formatError');
+    const successMessage = document.getElementById('successMessage');
+    
+    let debounceTimer;
+
+    // URL validation function
+    function isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // URL ইনপুটে ডিবাউন্সিং
+    urlInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        urlError.style.display = 'none';
+        formatError.style.display = 'none';
+        formatInfo.style.display = 'none';
+        
+        const url = urlInput.value.trim();
+        
+        if (url.length > 20 && isValidUrl(url)) {
+            formatLoading.style.display = 'block';
+            debounceTimer = setTimeout(() => checkFormats(url), 800);
+        } else {
+            resetFormatSelect();
+            formatLoading.style.display = 'none';
+        }
+    });
+    
+    function checkFormats(url) {
+        fetch('/get_formats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({url: url})
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network error');
+            return response.json();
+        })
+        .then(formats => {
+            formatLoading.style.display = 'none';
+            
+            if (formats && formats.length > 0) {
+                populateFormatSelect(formats);
+                formatError.style.display = 'none';
+                successMessage.style.display = 'none';
+            } else {
+                throw new Error('No formats available');
+            }
+        })
+        .catch(error => {
+            formatLoading.style.display = 'none';
+            formatError.textContent = '❌ ' + error.message + '. Please check the URL and try again.';
+            formatError.style.display = 'block';
+            resetFormatSelect();
+        });
+    }
+    
+    function populateFormatSelect(formats) {
+        formatSelect.innerHTML = '';
+        formatDetails.innerHTML = '';
+        
+        // গ্রুপ করে অপশনগুলো দেখানো
+        const videoFormats = formats.filter(f => f.type.includes('video'));
+        const audioFormats = formats.filter(f => f.type === 'audio');
+        
+        // Best quality option
+        const bestOption = document.createElement('option');
+        bestOption.value = 'best';
+        bestOption.textContent = '🚀 Best Quality (Recommended)';
+        formatSelect.appendChild(bestOption);
+        
+        // ভিডিও ফরম্যাটগুলো
+        if (videoFormats.length > 0) {
+            const videoGroup = document.createElement('optgroup');
+            videoGroup.label = '📹 Video Formats (MP4)';
+            formatSelect.appendChild(videoGroup);
+            
+            videoFormats.forEach(format => {
+                const option = document.createElement('option');
+                option.value = format.format_id;
+                option.textContent = `🎥 ${format.name}`;
+                videoGroup.appendChild(option);
+                
+                // ভিজুয়াল ডিসপ্লে
+                const formatItem = document.createElement('div');
+                formatItem.className = 'format-item';
+                formatItem.textContent = format.name;
+                formatItem.onclick = () => {
+                    formatSelect.value = format.format_id;
+                    document.querySelectorAll('.format-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    formatItem.classList.add('selected');
+                };
+                formatDetails.appendChild(formatItem);
+            });
+        }
+        
+        // অডিও ফরম্যাটগুলো
+        if (audioFormats.length > 0) {
+            const audioGroup = document.createElement('optgroup');
+            audioGroup.label = '🎵 Audio Formats (MP3)';
+            formatSelect.appendChild(audioGroup);
+            
+            audioFormats.forEach(format => {
+                const option = document.createElement('option');
+                option.value = format.format_id;
+                option.textContent = `🎵 ${format.name}`;
+                audioGroup.appendChild(option);
+            });
+        }
+        
+        formatSelect.disabled = false;
+        submitBtn.disabled = false;
+        formatInfo.style.display = 'block';
+    }
+    
+    function resetFormatSelect() {
+        formatSelect.innerHTML = '<option value="">Enter URL first to see available formats</option>';
+        formatSelect.disabled = true;
+        submitBtn.disabled = true;
+        formatDetails.innerHTML = '';
+        formatInfo.style.display = 'none';
+    }
+    
+    // ফর্ম সাবমিশন
+    document.getElementById('downloadForm').addEventListener('submit', function(e) {
+        const selectedFormat = formatSelect.value;
+        if (!selectedFormat) {
+            e.preventDefault();
+            formatError.textContent = 'Please select a format first';
+            formatError.style.display = 'block';
+            return false;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '⏳ Downloading... Please wait';
+        successMessage.style.display = 'block';
+        
+        // 5 সেকেন্ড পর বাটন রিসেট
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '⬇️ Download Now';
+            successMessage.style.display = 'none';
+        }, 5000);
+    });
+    
+    // পেজ লোড হলে URL ফোকাস
+    urlInput.focus();
+});
+</script>
+
+</body>
+</html>
